@@ -2259,7 +2259,8 @@ function platformServiceInstallCleanupOps(backend: ServiceBackend): ServiceInsta
         // unreachable/permission-denied manager still makes `sh()` throw and the
         // caller therefore fails closed.
         const loadState = sh(`systemctl --user show ${TASK} --property=LoadState --value`).trim().toLowerCase();
-        return !loadState || loadState === "not-found" ? null : loadState;
+        if (!loadState) throw new Error("systemd service status could not be verified.");
+        return loadState === "not-found" ? null : loadState;
       },
       stop: () => { sh(`systemctl --user stop ${TASK}`); },
     };
