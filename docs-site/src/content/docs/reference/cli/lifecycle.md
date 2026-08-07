@@ -41,8 +41,9 @@ normal drain, and verify a different runtime PID on the same port. Managed routi
 supervision stay installed throughout; an uncertain request is observed rather than replayed as a
 separate stop/start. If no proxy is running, the command falls back to the normal `ensure` start.
 If a live listener cannot be attested to a runtime PID (including a pre-update proxy), restart fails
-closed without an `ensure` or stop/start fallback. After confirming ownership, run `ocx stop` and
-then `ocx start` once.
+closed without an `ensure` or stop/start fallback. After confirming ownership, use `ocx stop` then
+`ocx start` for a standalone proxy. For a service-managed proxy, use `ocx stop` followed by
+`ocx service start` so supervision is restored.
 
 ### `ocx ensure`
 
