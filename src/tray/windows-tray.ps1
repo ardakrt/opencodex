@@ -272,9 +272,9 @@ function Update-TrayState {
         $commandFailed = $script:pendingProcess.HasExited -and $script:pendingProcess.ExitCode -ne 0
       } catch {
         Write-ActionLog "pending process result inspection failed: $($_.Exception.GetType().Name)"
-        # If we cannot inspect the tracked restart command, we cannot prove it is
-        # still healthy. Fail the pending action instead of silently waiting for a
-        # later timeout and presenting an indeterminate process as success-capable.
+        # If we cannot inspect the tracked command, we cannot prove it is still
+        # healthy. Fail the pending action instead of silently waiting for a later
+        # timeout and presenting an indeterminate process as success-capable.
         $commandFailed = $true
       }
     }
@@ -289,12 +289,22 @@ $startItem.add_Click({
   if (-not (Set-PendingAction "Start Proxy" 75)) { return }
   $statusItem.Text = "Proxy: Starting..."
   # service start can spend 20s and the CLI then observes health for another 40s.
-  if (-not (Start-OcxCommand @("__tray-start"))) { Complete-PendingAction $false }
+  $startProcess = Start-OcxCommand @("__tray-start") -TrackExit
+  if ($startProcess -is [System.Diagnostics.Process]) {
+    $script:pendingProcess = $startProcess
+  } else {
+    Complete-PendingAction $false
+  }
 })
 $stopItem.add_Click({
   if (-not (Set-PendingAction "Stop Proxy" 15)) { return }
   $statusItem.Text = "Proxy: Stopping..."
-  if (-not (Start-OcxCommand @("stop"))) { Complete-PendingAction $false }
+  $stopProcess = Start-OcxCommand @("stop") -TrackExit
+  if ($stopProcess -is [System.Diagnostics.Process]) {
+    $script:pendingProcess = $stopProcess
+  } else {
+    Complete-PendingAction $false
+  }
 })
 $restartItem.add_Click({
   if (-not (Set-PendingAction "Restart Proxy" 160)) { return }
