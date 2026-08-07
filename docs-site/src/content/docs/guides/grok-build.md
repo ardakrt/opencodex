@@ -127,9 +127,12 @@ the id `grok-4.5`. Generated aliases avoid dots entirely for this reason.
   rejects unknown event types, so a manually configured `api_backend = "responses"` model
   can fail mid-turn on slow upstreams. The auto-registered entries pin
   `api_backend = "chat_completions"`, which never surfaces raw heartbeat frames.
-- **Service-installed `ocx restart`:** the running proxy owns its drain and replacement, so service
-  supervision and the managed block remain installed. The command succeeds only after a different,
-  identity-verified process is healthy on the same port.
+- **Service-installed `ocx restart`:** the running proxy owns restart authorization and drain
+  coordination, while the installed service manager launches the replacement after the old process
+  exits. Service supervision remains installed. On loopback auto-registration, the managed block
+  also remains in place across the handoff; non-loopback deployments use manually managed Grok
+  configuration instead. The command succeeds only after a different, identity-verified process is
+  healthy on the same port.
 - **Config read timing:** start opencodex first, then launch `grok` for the most
   predictable results. Grok Build watches `~/.grok/config.toml` and reloads when the
   `[model]` table actually changes (roughly a one-second debounce, compared by content), so
