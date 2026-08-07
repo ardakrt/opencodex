@@ -214,6 +214,18 @@ describe("bound system restart client", () => {
     expect(uncertainOutcome.accepted ? null : uncertainOutcome.uncertain).toBe(true);
   });
 
+  test("treats an unreachable attestation probe as definite and never posts", async () => {
+    const setup = successfulDeps();
+    setup.deps.fetchImpl = (async (input: string | URL | Request) => {
+      if (String(input).endsWith("/healthz")) throw new Error("connection refused");
+      throw new Error("POST must not be attempted");
+    }) as typeof fetch;
+    const outcome = await requestBoundSystemRestart(target, 10_000, setup.deps);
+    expect(outcome).toMatchObject({ accepted: false, uncertain: false });
+    expect(outcome.accepted ? "" : (outcome.error as Error).message)
+      .toBe("restart_attestation_unreachable");
+  });
+
   test("enforces the absolute deadline before any fetch", async () => {
     const setup = successfulDeps();
     setup.deps.now = () => 10_001;
