@@ -138,7 +138,12 @@ the native passthrough there is no canonical Fast injection and no wire mapping:
 and `fastMode` injects nothing here. Resolved-Fast-policy injection applies only to routes that
 take the Chat -> Responses -> Chat bridge below. `parallel_tool_calls` is emitted only for providers opted into
 parallel tools (or pinned false by the existing provider opt-out contract).
-The native passthrough still applies the existing model capability authority to reasoning: an
+A `reasoning_details` entry carrying Anthropic state — the `anthropic-claude-v1` marker, or an
+unmarked `reasoning.text` whose signature passes the inbound spelling check — makes the request
+ineligible for native passthrough so its signature or redacted ciphertext cannot cross into
+another provider; the bridge keeps only the plaintext projection. Other provider formats
+retain their native wire shape. The native
+passthrough still applies the existing model capability authority to reasoning: an
 explicit empty ladder removes caller `reasoning_effort`, while an unknown ladder remains
 unclassified. The two Chat builders share the explicit wire policy after provider resolution:
 `reasoningWireFormat: "gateway-object"` projects the configured object shape, and a listed
@@ -237,6 +242,22 @@ identity stays missing; a shared prefix/cache key is not converted into a sessio
 outbound contract is covered by `tests/responses/chat-conversation-affinity.test.ts`. A promoted
 caller `x-session-id` arrives at this bridge already as `session_id` (see above).
 This transport contract does not prove a client's emission, Pool selection stability or cache hits.
+
+The optional `x-hermes-conversation-id` header is accepted on `/v1/chat/completions` and `/v1/responses`
+strictly as a log-only correlation fallback (`logCtx.conversationId`), normalized to a 32-hex-character
+digest and stripped before upstream forwarding. It never modifies native session lane allocation
+(`sessionLaneIdFromRequest`), turn termination (`bindTurnTerminationScope`), or upstream prompt caching.
+Native header candidates (`x-codex-parent-thread-id`, `session_id`, `session-id`, `thread-id`) are each
+normalized independently in priority order before considering Hermes, ensuring that an empty or whitespace
+candidate does not mask a valid native identity. Configuring `session_affinity_header: x-hermes-conversation-id`
+on Hermes replaces the client's `session-id` header, trading away native session identity and lane scoping
+for log-only correlation; `session-id` remains the generated default.
+A Hermes-derived log id is marked `conversationIdIsHermesFallback` (in memory, never persisted). Chat sets
+it before routing so pre-dispatch refusals stay correlated; `assignNativeLogConversationId` lets any later
+native id replace it — `prepareResponsesRequest` resolution and the Cursor conversation backfills in
+`run-turn-execution.ts`, `sidecar-execution.ts` and `request-transport.ts` — while a caller-owned
+pre-populated id (routed Claude) is kept. Covered by `tests/usage/request-log-conversation.test.ts` and
+`tests/responses/chat-conversation-affinity.test.ts`.
 
 ## Chat streaming client with a JSON upstream result
 
